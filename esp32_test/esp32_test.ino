@@ -12,10 +12,10 @@
 
 #define SOIL_PIN 36
 #define DHT_PIN 33
-#define LIGHT_PIN 34
+#define LIGHT_PIN 35
 
-const char* ssid = "";              // CHANGE IT
-const char* password = "";  // CHANGE IT
+const char* ssid = "Home_2,4";              // CHANGE IT
+const char* password = "53AYFBECFy8ENDsk";  // CHANGE IT
 
 AsyncWebServer server(80);
 DHT dht11(DHT_PIN, DHT11);
@@ -27,7 +27,7 @@ void setup() {
   analogSetAttenuation(ADC_11db);
 
   dht11.begin();  // initialize the DHT11 sensor
-  
+
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -63,7 +63,7 @@ void loop() {
   float temp = dht11.readTemperature();
 
   // check whether the reading is successful or not
-  if (isnan(temp)|| isnan(hum)) {
+  if (isnan(temp) || isnan(hum)) {
     Serial.println("Failed to read from DHT11 sensor!");
   } else {
     Serial.print("Humidity: ");
@@ -98,5 +98,5 @@ void loop() {
 
 
   delay(500);
-  //String jsonData = "{\"temperature\":" + String(temp) + ",\"humidity\":" + String(hum) + "}";
+  String jsonData = "{\"airTemperature\":" + String(temp) + ",\"airHumidity\":" + String(hum) + ",\"luminosity\":" + String(lightAnalogValue) + ",\"soilHumidity\":" + String(soilAnalogValue) + "}";
 }
