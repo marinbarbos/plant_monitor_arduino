@@ -38,7 +38,7 @@ void setup() {
   analogSetAttenuation(ADC_11db);
     
   // Initialize I2C
-  Wire.begin(I2C_SDA, I2C_SCL);
+  //Wire.begin(I2C_SDA, I2C_SCL);
   
   // Initialize LCD
   //lcd.init();
