@@ -25,11 +25,11 @@ const int DRY_SOIL = 4095;    // Soil moisture when completely dry
 const int WET_SOIL = 1500;    // Soil moisture when completely wet
 
 // I2C Pins (ESP32 default)
-#define I2C_SDA 21
-#define I2C_SCL 22
+//#define I2C_SDA 21
+//#define I2C_SCL 22
 
 // LCD Setup - Most common I2C address is 0x27, but could be 0x3F
-LiquidCrystal_I2C lcd(0x27, 16, 2);  // Address 0x27, 16 columns, 2 rows
+//LiquidCrystal_I2C lcd(0x27, 16, 2);  // Address 0x27, 16 columns, 2 rows
 
 void setup() {
   Serial.begin(115200);
@@ -41,25 +41,25 @@ void setup() {
   Wire.begin(I2C_SDA, I2C_SCL);
   
   // Initialize LCD
-  lcd.init();
-  lcd.backlight();
-  lcd.clear();
+  //lcd.init();
+  //lcd.backlight();
+  //lcd.clear();
   
   // Show startup message
-  lcd.setCursor(0, 0);
-  lcd.print("Micro Garden");
-  lcd.setCursor(0, 1);
-  lcd.print("Starting...");
-  delay(2000);
+  //lcd.setCursor(0, 0);
+  //lcd.print("Micro Garden");
+  //lcd.setCursor(0, 1);
+  //lcd.print("Starting...");
+  //delay(2000);
 
   // Initialize DHT11 sensor
   dht11.begin();
   
   // Setup Access Point
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Setting up AP...");
-  Serial.println("Setting up Access Point...");
+  //lcd.clear();
+  //lcd.setCursor(0, 0);
+  //lcd.print("Setting up AP...");
+  //Serial.println("Setting up Access Point...");
 
   // Setup Access Point
   Serial.println("Setting up Access Point...");
@@ -70,11 +70,11 @@ void setup() {
   Serial.println(IP);
   
   // Display IP on LCD
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("IP Address:");
-  lcd.setCursor(0, 1);
-  lcd.print(IP);
+  //lcd.clear();
+  //lcd.setCursor(0, 0);
+  //lcd.print("IP Address:");
+  //lcd.setCursor(0, 1);
+  //lcd.print(IP);
   
   server.begin();
   Serial.println("Server started");
