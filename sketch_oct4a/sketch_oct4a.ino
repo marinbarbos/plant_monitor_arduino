@@ -32,11 +32,14 @@ const int WET_SOIL = 1500;    // Soil moisture when completely wet
 //LiquidCrystal_I2C lcd(0x27, 16, 2);  // Address 0x27, 16 columns, 2 rows
 
 void setup() {
+  delay(2000);
+
   Serial.begin(115200);
-  
+  // Wait for serial to be ready
+  while(!Serial && millis() < 5000);
   // Set ADC attenuation
   analogSetAttenuation(ADC_11db);
-    
+    yield();
   // Initialize I2C
   //Wire.begin(I2C_SDA, I2C_SCL);
   
@@ -53,7 +56,7 @@ void setup() {
   //delay(2000);
 
   // Initialize DHT11 sensor
-  dht11.begin();
+  // dht11.begin();
   
   // Setup Access Point
   //lcd.clear();
