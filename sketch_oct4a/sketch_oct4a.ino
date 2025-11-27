@@ -7,7 +7,7 @@
 #include <DHT.h>
 
 #define SOIL_PIN 36
-#define DHT_PIN 33
+#define DHT_PIN 4
 #define LIGHT_PIN 35
 
 // DHT11 Sensor
@@ -39,6 +39,7 @@ void setup() {
   while(!Serial && millis() < 5000);
   // Set ADC attenuation
   analogSetAttenuation(ADC_11db);
+  pinMode(LIGHT_PIN, INPUT);
     yield();
   // Initialize I2C
   //Wire.begin(I2C_SDA, I2C_SCL);
@@ -56,7 +57,7 @@ void setup() {
   //delay(2000);
 
   // Initialize DHT11 sensor
-  // dht11.begin();
+  dht11.begin();
   
   // Setup Access Point
   //lcd.clear();
@@ -70,7 +71,7 @@ void setup() {
   
   IPAddress IP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
-  Serial.println(IP);
+  Serial.println(IP); 
   
   // Display IP on LCD
   //lcd.clear();
@@ -87,31 +88,47 @@ void loop() {
   WiFiClient client = server.available();
   
   if (client) {
-    Serial.println("New Client Connected");
+    Serial.println("\n=== New Client Connected ===");
     String currentLine = "";
     String request = "";
     
     while (client.connected()) {
-      if (client.available()) {
-        char c = client.read();
-        request += c;
+    if (client.available()) {
+    char c = client.read();
+    request += c;
+    
+    if (c == '\n') {
+      if (currentLine.length() == 0) {
+        Serial.println("--- Full Request ---");
+        Serial.println(request);
+        Serial.println("--- End Request ---");
         
-        if (c == '\n') {
-          if (currentLine.length() == 0) {
-            // Parse the request
-            handleRequest(client, request);
-            break;
-          } else {
-            currentLine = "";
-          }
-        } else if (c != '\r') {
-          currentLine += c;
+        // Check what endpoint was requested
+        if (request.indexOf("GET /api/health") >= 0) {
+          Serial.println("→ Health check endpoint");
+        } else if (request.indexOf("GET /api/status") >= 0) {
+          Serial.println("→ Status endpoint");
+        } else if (request.indexOf("GET / HTTP") >= 0) {
+          Serial.println("→ Root endpoint");
+        } else {
+          Serial.println("→ Unknown endpoint (404)");
         }
+        
+        Serial.println("→ Calling handleRequest()...");
+        handleRequest(client, request);
+        Serial.println("→ handleRequest() completed");
+      } else {
+        currentLine = "";
       }
+    } else if (c != '\r') {
+      currentLine += c;
     }
+  }
+  delay(1); // Small delay to prevent tight loop
+}
     
     client.stop();
-    Serial.println("Client Disconnected\n");
+    Serial.println("=== Client Disconnected ===\n");
   }
 }
 
@@ -121,6 +138,9 @@ void handleRequest(WiFiClient &client, String request) {
     sendHealthResponse(client);
   } else if (request.indexOf("GET /api/status") >= 0) {
     sendStatusResponse(client);
+  } else if (request.indexOf("GET / HTTP") >= 0) {
+    // Handle root endpoint
+    sendRootResponse(client);
   } else {
     send404Response(client);
   }
@@ -139,11 +159,16 @@ void sendHealthResponse(WiFiClient &client) {
 }
 
 void sendStatusResponse(WiFiClient &client) {
+  Serial.println("→ Reading sensors...");
+  
   // Read all sensors
+  delay(1000);
   float temperature = dht11.readTemperature();
   float humidity = dht11.readHumidity();
   int lightRaw = analogRead(LIGHT_PIN);
   int soilRaw = analogRead(SOIL_PIN);
+  
+  Serial.println("→ Sensors read successfully");
   
   // Convert soil moisture to percentage (0-100%)
   float soilMoisture = map(soilRaw, DRY_SOIL, WET_SOIL, 0, 100);
@@ -168,6 +193,8 @@ void sendStatusResponse(WiFiClient &client) {
   String lightRec = getLightRecommendation(lightRaw);
   String soilRec = getSoilMoistureRecommendation(soilMoisture);
   
+  Serial.println("→ Building JSON response...");
+  
   // Get current timestamp (milliseconds since boot)
   unsigned long timestamp = millis();
   
@@ -186,6 +213,9 @@ void sendStatusResponse(WiFiClient &client) {
   json += "}";
   json += "}";
   
+  Serial.println("→ JSON built, length: " + String(json.length()));
+  Serial.println("→ Sending HTTP response...");
+  
   // Send HTTP response
   client.println("HTTP/1.1 200 OK");
   client.println("Content-Type: application/json");
@@ -195,8 +225,29 @@ void sendStatusResponse(WiFiClient &client) {
   client.println();
   client.println(json);
   
-  Serial.println("Status data sent successfully");
+  Serial.println("→ Response sent successfully!");
   Serial.println("========================\n");
+}
+
+void sendRootResponse(WiFiClient &client) {
+  String json = "{";
+  json += "\"message\":\"Micro Garden API\",";
+  json += "\"version\":\"1.0\",";
+  json += "\"endpoints\":[";
+  json += "\"/api/health\",";
+  json += "\"/api/status\"";
+  json += "]";
+  json += "}";
+  
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: application/json");
+  client.println("Access-Control-Allow-Origin: *");
+  client.println("Connection: close");
+  client.println("Content-Length: " + String(json.length()));
+  client.println();
+  client.println(json);
+  
+  Serial.println("Root endpoint requested");
 }
 
 void send404Response(WiFiClient &client) {
@@ -240,20 +291,17 @@ String getSoilMoistureRecommendation(float moisture) {
   }
 }
 
-// Generate ISO 8601 timestamp string
-String getISOTimestamp(unsigned long millis) {
-  // Since ESP32 doesn't have RTC by default, we'll use a simple format
-  // In production, you'd want to use NTP or an RTC module
-  unsigned long seconds = millis / 1000;
+String getISOTimestamp(unsigned long millisecs) {
+  unsigned long seconds = millisecs / 1000;
   unsigned long minutes = seconds / 60;
   unsigned long hours = minutes / 60;
-  unsigned long days = hours / 24;
   
   seconds = seconds % 60;
   minutes = minutes % 60;
   hours = hours % 24;
   
   char timestamp[30];
-  sprintf(timestamp, "xxxx-yy-zzT%02lu:%02lu:%02lu.000Z", hours, minutes, seconds);
+  // TODO update time
+  sprintf(timestamp, "2025-12-02T%02lu:%02lu:%02luZ", hours, minutes, seconds);
   return String(timestamp);
 }
